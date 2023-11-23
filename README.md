@@ -22,17 +22,21 @@ Configure as seguitnes variaveis de ambiente no CircleCI:
 
 ## Tecnologias utilizadas
 
+
+
 1 - utilizarei o Terraform como Infraestrutura como Código 
 
 2 - CircleCI como Pipeline CI/CD
 
-3 - ECS/Fargate como gerenciador de containers
+3 - ECS/Fargate como gerenciador de containers, e um load balancer para balancear carga
 
-4 - Cloudwatch como monitoramento
+4 - ECR como repositório de código.
 
-5 - AWS como Cloud
+5 - Cloudwatch como monitoramento
 
-6 - Git como repositório
+6 - AWS como Cloud
+
+7 - Git como repositório
 
 ##Deploy
 
@@ -42,4 +46,16 @@ Configure as seguitnes variaveis de ambiente no CircleCI:
 4 - acesse a aplicação pelo output do DNS do LoadBalancer
 
 Toda alteração na aplicaçaõ será automaticamente refletida na estrutura AWS.
+
+##Estrutura Terraform
+
+A estrutura terraform consiste em uma VPC com 3 Subnets em 3 AZ's diferentes, um SG de borda para o ALB e o segundo SG encaminha para o serviço do ECS que apenas aceita request do SG do ALB.
+
+O ALB encaminha todas as requisições para o serviço do ECS, assim balanceando a carga e mantendo o mesmo DNS.
+
+## CircleCI
+
+Toda alteração do código da aplicação é identificada automaticamente buildada pelo CircleCI, e adiciando como ultima revisão na task definition do ECS e automaticante atualizada pelo serviço do ECS, assim o deploy não tem downtime e em alguns minutos a alteração já está no ar.
+
+
 
