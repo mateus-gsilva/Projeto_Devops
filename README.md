@@ -38,7 +38,7 @@ Configure as seguitnes variaveis de ambiente no CircleCI:
 
 7 - Git como repositório
 
-##Deploy
+## Deploy
 
 1 - Configure as variáveis de ambiente no Circle CI
 2 - Execute a estrutura em terraform
@@ -47,7 +47,7 @@ Configure as seguitnes variaveis de ambiente no CircleCI:
 
 Toda alteração na aplicaçaõ será automaticamente refletida na estrutura AWS.
 
-##Estrutura Terraform
+## Estrutura Terraform
 
 A estrutura terraform consiste em uma VPC com 3 Subnets em 3 AZ's diferentes, um SG de borda para o ALB e o segundo SG encaminha para o serviço do ECS que apenas aceita request do SG do ALB.
 
