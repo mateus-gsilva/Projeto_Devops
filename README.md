@@ -1,59 +1,45 @@
-# DevOps - Teste
-Acreditamos que DevOps deixou de ser tendência e passou a ser um fator de competitividade das empresas.
+# Projeto Pipeline Ci/CD
 
-Aqui está o que gostaríamos de ver:
+Um desafio de um processo seletivo que participei, que  constitui em construir uma pipeline do zero.
 
-1 - Infraestrutura como Código (Terraform/CloudFormation/Chef/Ansible/Puppet) / Utilizarei Terraform
+## Começando
 
-2 - Pipeline CI/CD (CircleCI/TravisCI/GitlabCI/Jenkins/Bamboo) / Utilizarem CircleCI
+AWS CLI em seu editor de texto
+Terraform configurado em seu ambiente
+Crie o projeto no CircleCI e associe ao projeto do GitHub
 
-3 - Docker/Container (Dockerfile/ECS/Minikube/Kubernetes) / Utilizarei ECS
+### Variáveis de Ambiente - CircleCI
 
-4 - Monitoramento (CloudWatch/Graylog/ElasticSearch/Kibana) / Utilizarei Cloudwatch
+Configure as seguitnes variaveis de ambiente no CircleCI:
 
-5 - Cloud (AWS/Azure/GCP) / Utilzarei AWS
 
-6 - Git (Github/Gitlab/BitBucket) / Utilizarei Git
+AWS_ACCOUNT_ID = id da conta
+AWS_ECR_REGISTRY_ID = id da conta
+AWS_REGION = região padrão. deve ser utilizada as mesmas localizadas em terraform/variables.tf
+AWS_ACCESS_KEY_ID = access key para acessar a aws
+AWS_SECRET_ACCESS_KEY = secret key para acessar a aws
+MY_APP_PREFIX = prefixo que será utilizado em seu projeto
 
-### Para o desafio você é livre para utilizar as ferramentas que fique confortável para você.
+## Tecnologias utilizadas
 
-Seu desafio é criar um pipeline para implementação da aplicação de forma automatizada e disponibilizar acesso via web.
+1 - utilizarei o Terraform como Infraestrutura como Código 
 
-* Recomendamos a criação de uma conta de nível gratuito(free tier) para não incorrer em custos.
+2 - CircleCI como Pipeline CI/CD
 
-## Desafio:
+3 - ECS/Fargate como gerenciador de containers
 
-Estamos testando sua capacidade de implementar infraestrutura automatizada moderna, bem como conhecimentos gerais sobre administração de sistemas. Na sua solução, você deve enfatizar a legibilidade, a manutenção e as metodologias de DevOps.
+4 - Cloudwatch como monitoramento
 
-1 - Criar um Dockerfile para rodar uma aplicação a sua escolha. Recomendamos o NodeJS do diretório /app.
+5 - AWS como Cloud
 
-2 - Criar um Pipeline com os passos abaixo(Checkout/Test/Deploy). Recomendamos CircleCI.
+6 - Git como repositório
 
-2.1 - Checkout -> Checkout do Código
+###Deploy
 
-2.2 - Test -> Teste com output "Fake test" ou o teste da sua aplicação.
+1 - Configure as variáveis de ambiente no Circle CI
+2 - Execute a estrutura em terraform
+3 - O CircleCI automaticamente efetuará o deploy do código em ECS
+4 - acesse a aplicação pelo output do DNS do LoadBalancer
 
-2.3 - Deploy -> Criar um script para implementar de forma automatizada a aplicação. Deploy deve ser feito via pipeline no local 
-de sua escolha. Recomendamos AWS (EC2, ECS, Fargate, Beanstalk, etc).
+Toda alteração na aplicaçaõ será automaticamente refletida na estrutura AWS.
 
-3 - Criar a Infraestrurura como Código. Recomendamos terraform.
-
-4 - Disponibilizar uma URL/IP com o retorno do Aplicação "Hello World! {hostname}!".
-
-## Envie sua solução
-Crie um repositório público(recomendamos o Github). Preferimos ver um histórico de tentativa e erro do que um único push. Quando terminar, envie-nos a URL do repositório do git e URL/IP da aplicação.
-
-### Executando aplicação em NodeJS no diretório /app.
-Essa é uma aplicação NodeJS.
-
-- `npm test` Roda o Fake test da aplicação
-- `npm start` Inicia a aplicação na porta 3000
-
-## Bônus
-Converter os dados da Receita Federal para CVS e dispobinilizar no local a sua escolha. Recomendamos um Bucket S3.
-
-Dados: http://200.152.38.155/CNPJ/DADOS_ABERTOS_CNPJ_01.zip
-
-Dados Receita: http://receita.economia.gov.br/orientacao/tributaria/cadastros/cadastro-nacional-de-pessoas-juridicas-cnpj/dados-publicos-cnpj
-
-https://github.com/fabioserpa/CNPJ-full
