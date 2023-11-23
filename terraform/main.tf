@@ -51,8 +51,8 @@ resource "aws_ecs_task_definition" "task" {
   container_definitions    = <<DEFINITION
   [
     {
-      "name"      : "devops-teste-service",
-      "image"     : "559668712614.dkr.ecr.us-east-1.amazonaws.com/devops_teste:abbc9889dcd33d9d8f5fe1e7a3cd3ca28a5832c5",
+      "name"      : "projeto-devops-service",
+      "image"     : "559668712614.dkr.ecr.us-east-1.amazonaws.com/projeto-devops:abbc9889dcd33d9d8f5fe1e7a3cd3ca28a5832c5",
       "cpu"       : 256,
       "memory"    : 1024,
       "essential" : true,
