@@ -7,7 +7,7 @@ orbs:
 
 
 jobs:
-  show-ecr-uri:
+  update-ecr-uri:
     docker:
       - image: amazon/aws-cli:latest
     steps:
@@ -47,7 +47,7 @@ workflows:
           family: '${MY_APP_PREFIX}-service'
           cluster: '${MY_APP_PREFIX}'
           container-image-name-updates: 'container=${MY_APP_PREFIX}-service,tag=${CIRCLE_SHA1}'
-      - show-ecr-uri:
+      - update-ecr-uri:
           requires:
             - aws-ecs/deploy-service-update
             - aws-ecr/build-and-push-image
