@@ -11,7 +11,7 @@ resource "aws_ecs_cluster" "cluster" {
 /*
 resource "aws_ecs_task_definition" "task" {
   family                   = "service"
-  network_mode             = "awsvpc"
+  network_mode             = "a wsvpc"
   requires_compatibilities = ["FARGATE", "EC2"]
   cpu                      = 512
   memory                   = 2048
