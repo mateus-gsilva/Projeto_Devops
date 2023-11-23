@@ -63,5 +63,7 @@ Toda alteração do código da aplicação é identificada automaticamente build
 
 Utilize o DNS do loadbalancer, você pode obte-lo pelo output do terraform ou pelo console.
 
+A minha aplicação está disponível em: projeto-devops-1472919049.us-east-1.elb.amazonaws.com
+
 
 
