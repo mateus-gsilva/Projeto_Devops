@@ -14,10 +14,15 @@ Configure as seguitnes variaveis de ambiente no CircleCI:
 
 
 1 - AWS_ACCOUNT_ID = id da conta
+
 2 - AWS_ECR_REGISTRY_ID = id da conta
+
 3 - AWS_REGION = região padrão. deve ser utilizada as mesmas localizadas em terraform/variables.tf
+
 4 - AWS_ACCESS_KEY_ID = access key para acessar a aws
+
 5 - AWS_SECRET_ACCESS_KEY = secret key para acessar a aws
+
 6 - MY_APP_PREFIX = prefixo que será utilizado em seu projeto
 
 ## Tecnologias utilizadas
