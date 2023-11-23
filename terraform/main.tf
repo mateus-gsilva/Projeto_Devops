@@ -1,5 +1,3 @@
-############CREATING A ECS CLUSTER#############
-
 resource "aws_ecs_cluster" "cluster" {
   name = var.app_prefix
   setting {
