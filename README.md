@@ -24,19 +24,19 @@ Configure as seguitnes variaveis de ambiente no CircleCI:
 
 
 
-1 - utilizarei o Terraform como Infraestrutura como Código 
+utilizarei o Terraform como Infraestrutura como Código 
 
-2 - CircleCI como Pipeline CI/CD
+CircleCI como Pipeline CI/CD
 
-3 - ECS/Fargate como gerenciador de containers, e um load balancer para balancear carga
+ECS/Fargate como gerenciador de containers, e um load balancer para balancear carga
 
-4 - ECR como repositório de código.
+ECR como repositório de código.
 
-5 - Cloudwatch como monitoramento
+Cloudwatch como monitoramento
 
-6 - AWS como Cloud
+AWS como Cloud
 
-7 - Git como repositório
+Git como repositório
 
 ## Deploy
 
