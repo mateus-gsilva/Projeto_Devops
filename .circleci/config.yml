@@ -32,7 +32,7 @@ jobs:
       - checkout
       - run: 
           name: Run npm test
-          command: npm test
+          command: cd /root/project && npm test
             
 workflows:
   build-and-deploy:
