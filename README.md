@@ -1,4 +1,4 @@
-# Projeto Pipeline Ci/CD
+# Projeto Pipeline CI/CD
 
 Um desafio de um processo seletivo que participei, que  constitui em construir uma pipeline do zero.
 
