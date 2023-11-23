@@ -23,15 +23,15 @@ Configure as seguitnes variaveis de ambiente no CircleCI:
 ## Tecnologias utilizadas
 
 
-utilizarei o Terraform como Infraestrutura como Código 
+utilizarei o Terraform como Infraestrutura como Código
 
 CircleCI como Pipeline CI/CD
 
 ECS/Fargate como gerenciador de containers, e um load balancer para balancear carga
 
-ECR como repositório de código.
+ECR como repositório de código
 
-Cloudwatch como monitoramento
+Cloudwatch como monitoramento - em andamento
 
 AWS como Cloud
 
@@ -47,7 +47,7 @@ Github como repositório
 
 4 - acesse a aplicação pelo output do DNS do LoadBalancer
 
-Toda alteração na aplicaçaõ será automaticamente refletida na estrutura AWS.
+Toda alteração na aplicação será automaticamente refletida na estrutura AWS.
 
 ## Estrutura Terraform
 
@@ -57,7 +57,9 @@ O ALB encaminha todas as requisições para o serviço do ECS, assim balanceando
 
 ## CircleCI
 
-Toda alteração do código da aplicação é identificada automaticamente buildada pelo CircleCI, e adiciando como ultima revisão na task definition do ECS e automaticante atualizada pelo serviço do ECS, assim o deploy não tem downtime e em alguns minutos a alteração já está no ar.
+Toda alteração do código da aplicação é identificada automaticamente e buildada, testada e feito o deploy pelo CircleCI.
+
+O deploy é feito atualizando a task definition do serviço ECS, assim replicando para as tasks criada pelo mesmo.
 
 ## Como acessar
 
