@@ -23,7 +23,6 @@ Configure as seguitnes variaveis de ambiente no CircleCI:
 ## Tecnologias utilizadas
 
 
-
 utilizarei o Terraform como Infraestrutura como Código 
 
 CircleCI como Pipeline CI/CD
@@ -36,7 +35,7 @@ Cloudwatch como monitoramento
 
 AWS como Cloud
 
-Git como repositório
+Github como repositório
 
 ## Deploy
 
