@@ -41,8 +41,11 @@ Git como repositório
 ## Deploy
 
 1 - Configure as variáveis de ambiente no Circle CI
+
 2 - Execute a estrutura em terraform
+
 3 - O CircleCI automaticamente efetuará o deploy do código em ECS
+
 4 - acesse a aplicação pelo output do DNS do LoadBalancer
 
 Toda alteração na aplicaçaõ será automaticamente refletida na estrutura AWS.
@@ -56,6 +59,10 @@ O ALB encaminha todas as requisições para o serviço do ECS, assim balanceando
 ## CircleCI
 
 Toda alteração do código da aplicação é identificada automaticamente buildada pelo CircleCI, e adiciando como ultima revisão na task definition do ECS e automaticante atualizada pelo serviço do ECS, assim o deploy não tem downtime e em alguns minutos a alteração já está no ar.
+
+## Como acessar
+
+Utilize o DNS do loadbalancer, você pode obte-lo pelo output do terraform ou pelo console.
 
 
 
