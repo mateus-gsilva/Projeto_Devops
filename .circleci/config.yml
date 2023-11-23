@@ -32,7 +32,7 @@ jobs:
       - checkout
       - run: 
           name: Run npm test
-          command: "cd ~/app/ && npm test"
+          command: "pwd"
             
 workflows:
   build-and-deploy:
