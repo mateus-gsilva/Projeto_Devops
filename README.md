@@ -13,12 +13,12 @@ Crie o projeto no CircleCI e associe ao projeto do GitHub
 Configure as seguitnes variaveis de ambiente no CircleCI:
 
 
-AWS_ACCOUNT_ID = id da conta
-AWS_ECR_REGISTRY_ID = id da conta
-AWS_REGION = região padrão. deve ser utilizada as mesmas localizadas em terraform/variables.tf
-AWS_ACCESS_KEY_ID = access key para acessar a aws
-AWS_SECRET_ACCESS_KEY = secret key para acessar a aws
-MY_APP_PREFIX = prefixo que será utilizado em seu projeto
+1 - AWS_ACCOUNT_ID = id da conta
+2 - AWS_ECR_REGISTRY_ID = id da conta
+3 - AWS_REGION = região padrão. deve ser utilizada as mesmas localizadas em terraform/variables.tf
+4 - AWS_ACCESS_KEY_ID = access key para acessar a aws
+5 - AWS_SECRET_ACCESS_KEY = secret key para acessar a aws
+6 - MY_APP_PREFIX = prefixo que será utilizado em seu projeto
 
 ## Tecnologias utilizadas
 
@@ -34,7 +34,7 @@ MY_APP_PREFIX = prefixo que será utilizado em seu projeto
 
 6 - Git como repositório
 
-###Deploy
+##Deploy
 
 1 - Configure as variáveis de ambiente no Circle CI
 2 - Execute a estrutura em terraform
