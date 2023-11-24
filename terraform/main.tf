@@ -27,8 +27,6 @@ resource "aws_iam_role" "role" {
 }
 EOF
 
-  // Attach policies for ECR permissions
-  // Adjust the policy document based on your specific needs
   inline_policy {
     name = "ecr_permissions"
     policy = <<EOF
@@ -44,6 +42,7 @@ EOF
         "ecr:InitiateLayerUpload",
         "ecr:UploadLayerPart",
         "ecr:CompleteLayerUpload",
+        "ecr:GetDownloadUrlForLayer",
         "ecr:PutImage"
       ],
       "Resource": "*"
@@ -68,7 +67,7 @@ resource "aws_ecs_task_definition" "task" {
   [
     {
       "name"      : "projeto-devops-service",
-      "image"     : "343171458915.dkr.ecr.us-east-1.amazonaws.com/projeto-devops:399d6af876d4e278b87150f68236e10bf151ad2b",
+      "image"     : "343171458915.dkr.ecr.us-east-1.amazonaws.com/projeto-devops:0013faa2d91f017d66739591ad7e50da8f6e60a5",
       "cpu"       : 256,
       "memory"    : 1024,
       "essential" : true,
