@@ -1,76 +1,84 @@
 # Projeto Pipeline CI/CD
 
-Um desafio de um processo seletivo que participei, que  constitui em construir uma pipeline do zero.
+Este projeto foi desenvolvido como parte de um desafio em um processo seletivo e consiste na construção de uma pipeline do zero.
 
 ## Começando
 
-AWS CLI em seu editor de texto
-Terraform configurado em seu ambiente
-Crie o projeto no CircleCI e associe ao projeto do GitHub
+Certifique-se de ter as seguintes ferramentas configuradas em seu ambiente:
+- AWS CLI.
+- Terraform.
+- Docker (para validação inicial).
+- Projeto configurado no CircleCI associado ao repositório do GitHub.
 
 ### Variáveis de Ambiente - CircleCI
 
-Configure as seguitnes variaveis de ambiente no CircleCI:
+Configure as seguintes variáveis de ambiente no CircleCI:
 
+1. AWS_ACCOUNT_ID = ID da conta.
+2. AWS_ECR_REGISTRY_ID = ID do registro ECR.
+3. AWS_REGION = Região padrão (use as mesmas definidas em terraform/variables.tf).
+4. AWS_ACCESS_KEY_ID = Chave de acesso para a AWS.
+5. AWS_SECRET_ACCESS_KEY = Chave secreta para a AWS.
+6. MY_APP_PREFIX = Prefixo a ser utilizado em seu projeto.
 
-1 - AWS_ACCOUNT_ID = id da conta
+## Tecnologias Utilizadas
 
-2 - AWS_ECR_REGISTRY_ID = id da conta
-
-3 - AWS_REGION = região padrão. deve ser utilizada as mesmas localizadas em terraform/variables.tf
-
-4 - AWS_ACCESS_KEY_ID = access key para acessar a aws
-
-5 - AWS_SECRET_ACCESS_KEY = secret key para acessar a aws
-
-6 - MY_APP_PREFIX = prefixo que será utilizado em seu projeto
-
-## Tecnologias utilizadas
-
-
-utilizarei o Terraform como Infraestrutura como Código
-
-CircleCI como Pipeline CI/CD
-
-ECS/Fargate como gerenciador de containers, e um load balancer para balancear carga
-
-ECR como repositório de código
-
-Cloudwatch como monitoramento - em andamento
-
-AWS como Cloud
-
-Github como repositório
+- Terraform para Infraestrutura como Código.
+- CircleCI para Pipeline CI/CD.
+- ECS/Fargate como gerenciador de containers.
+- ECR como repositório de código.
+- Cloudwatch para monitoramento (em andamento).
+- AWS como provedor de nuvem.
+- GitHub como repositório.
 
 ## Deploy
 
-1 - Configure as variáveis de ambiente no Circle CI
-
-2 - Execute a estrutura em terraform
-
-3 - O CircleCI automaticamente efetuará o deploy do código em ECS
-
-4 - acesse a aplicação pelo output do DNS do LoadBalancer
+1. Configure as variáveis de ambiente no CircleCI conforme mencionado anteriormente.
+2. Execute a estrutura em Terraform.
+3. O CircleCI automaticamente efetuará o deploy do código em ECS.
+4. Acesse a aplicação pelo DNS do LoadBalancer.
 
 Toda alteração na aplicação será automaticamente refletida na estrutura AWS.
 
-## Estrutura Terraform
+## Estrutura Terraform/AWS
 
-A estrutura terraform consiste em uma VPC com 3 Subnets em 3 AZ's diferentes, um SG de borda para o ALB e o segundo SG encaminha para o serviço do ECS que apenas aceita request do SG do ALB.
+### VPC, Subnets e Security Groups
 
-O ALB encaminha todas as requisições para o serviço do ECS, assim balanceando a carga e mantendo o mesmo DNS.
+A estrutura Terraform consiste em uma VPC com 3 subnets em 3 AZs diferentes e Security Groups para o ALB e ECS.
+
+### ECS Cluster
+
+O ECS Cluster possui um serviço que efetua o deploy de 3 tasks, com rollout em caso de atualização.
+
+### CloudWatch
+
+Utilizamos as métricas do cluster ECS para monitoramento.
 
 ## CircleCI
 
 Toda alteração do código da aplicação é identificada automaticamente e buildada, testada e feito o deploy pelo CircleCI.
 
-O deploy é feito atualizando a task definition do serviço ECS, assim replicando para as tasks criada pelo mesmo.
+### Job 1 - Test
+![Job Test](/images/circleci-job-test.png)
 
-## Como acessar
+É feito o checkout e executado o npm test.
 
-Utilize o DNS do loadbalancer, você pode obte-lo pelo output do terraform ou pelo console.
+### Job 2 - Build and Push Image
+![Job Build and Push Image](/images/circleci-job-build-and-push-image.png)
 
-A minha aplicação está disponível em: http://projeto-devops-1315227714.us-east-1.elb.amazonaws.com/
+A imagem é buildada e feito o deploy para o repositório no ECR.
 
+### Job 3 - Update Service Update
+![Job Update Service Update](/images/circleci-job-deploy-service-update.png)
 
+É atualizado o serviço e cadastrada uma nova task definition.
+
+### Job 4 - Update Service Update
+![Job Update ECR URI](/images/circleci-job-update-ecr-uri.png)
+
+A imagem é atualizada com a nova URI e associada ao container da task definition.
+
+## Como Acessar
+
+Utilize o DNS do load balancer, disponível no output do Terraform ou no console. A aplicação está disponível em: [projeto-devops](http://projeto-devops-1315227714.us-east-1.elb.amazonaws.com/)
 
