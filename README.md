@@ -44,7 +44,7 @@ Toda alteração na aplicação será automaticamente refletida na estrutura AWS
 
 ### VPC, Subnets e Security Groups
 
-A estrutura Terraform consiste em uma VPC com 3 subnets em 3 AZs diferentes e Security Groups para o ALB e ECS.
+A estrutura Terraform consiste em uma VPC com 3 subnets em 3 AZs diferentes e Security Groups para o ALB (que esta em frente de toda a estrutura) e para o cluster ECS.
 
 ### ECS Cluster
 
