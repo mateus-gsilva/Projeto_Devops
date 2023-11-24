@@ -70,7 +70,7 @@ O deploy é feito atualizando a task definition do serviço ECS, assim replicand
 
 Utilize o DNS do loadbalancer, você pode obte-lo pelo output do terraform ou pelo console.
 
-A minha aplicação está disponível em: projeto-devops-1472919049.us-east-1.elb.amazonaws.com
+A minha aplicação está disponível em: projeto-devops-531368212.us-east-1.elb.amazonaws.com
 
 
 

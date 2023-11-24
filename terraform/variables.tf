@@ -26,6 +26,6 @@ variable "availability_zones_az3" {
 }
 
 variable "app_prefix" {
-    type    = string
+  type    = string
   default = "projeto-devops"
 }

@@ -6,37 +6,55 @@ resource "aws_ecs_cluster" "cluster" {
   }
 }
 
-data "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsTaskExecutionRole"
-}
 
-resource "aws_iam_role" "ecr_ecs_role" {
+resource "aws_iam_role" "role" {
   name = "ecr_ecs_role"
 
   assume_role_policy = <<EOF
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": "sts:AssumeRole",
-            "Principal": {
-            "Service": [
-                "s3.amazonaws.com",
-                "ec2.amazonaws.com",
-                "fargate.amazonaws.com",
-                "lambda.amazonaws.com",
-                "ecs-tasks.amazonaws.com",
-                "ecs.amazonaws.com"
-                
-            ]
-            },
-            "Effect": "Allow",
-            "Sid": ""
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": [
+          "ecs-tasks.amazonaws.com"
+        ]
+      }
+    }
+  ]
 }
 EOF
+
+  // Attach policies for ECR permissions
+  // Adjust the policy document based on your specific needs
+  inline_policy {
+    name = "ecr_permissions"
+    policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+        "ecr:PutImage"
+      ],
+      "Resource": "*"
+    }
+  ]
 }
+EOF
+  }
+}
+
+
 
 resource "aws_ecs_task_definition" "task" {
   family                   = "${var.app_prefix}-service"
@@ -44,13 +62,13 @@ resource "aws_ecs_task_definition" "task" {
   requires_compatibilities = ["FARGATE", "EC2"]
   cpu                      = 256
   memory                   = 1024
-  task_role_arn            = "${aws_iam_role.ecr_ecs_role.arn}"
-  execution_role_arn       = "${data.aws_iam_role.ecs_task_execution_role.arn}"
+  task_role_arn            = "${aws_iam_role.role.arn}"
+  execution_role_arn       = "${aws_iam_role.role.arn}"
   container_definitions    = <<DEFINITION
   [
     {
       "name"      : "projeto-devops-service",
-      "image"     : "559668712614.dkr.ecr.us-east-1.amazonaws.com/projeto-devops:abbc9889dcd33d9d8f5fe1e7a3cd3ca28a5832c5",
+      "image"     : "343171458915.dkr.ecr.us-east-1.amazonaws.com/projeto-devops:399d6af876d4e278b87150f68236e10bf151ad2b",
       "cpu"       : 256,
       "memory"    : 1024,
       "essential" : true,
