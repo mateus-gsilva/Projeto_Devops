@@ -48,7 +48,7 @@ A estrutura Terraform consiste em uma VPC com 3 subnets em 3 AZs diferentes e Se
 
 ### ECS Cluster
 
-O ECS Cluster possui um serviço que efetua o deploy de 3 tasks, com rollout em caso de atualização.
+O ECS Cluster possui um serviço que efetua o deploy de 3 tasks, com rollout em caso de atualização. Uma task definition será utilizada para gerenciar o container e aplicara as revisões.
 
 ### CloudWatch
 
