@@ -78,6 +78,12 @@ A imagem é buildada e feito o deploy para o repositório no ECR.
 
 A imagem é atualizada com a nova URI e associada ao container da task definition.
 
+## Monitoramento
+
+O dashboard irá monitorar o cluster ECS e seus componentes.
+
+![Cloudwatch Dashboard](/images/cloudwatch-dashboard.png)
+
 ## Como Acessar
 
 Utilize o DNS do load balancer, disponível no output do Terraform ou no console. A aplicação está disponível em: [projeto-devops](http://projeto-devops-1315227714.us-east-1.elb.amazonaws.com/)
