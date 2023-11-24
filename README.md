@@ -73,7 +73,7 @@ A imagem é buildada e feito o deploy para o repositório no ECR.
 
 É atualizado o serviço e cadastrada uma nova task definition.
 
-### Job 4 - Update Service Update
+### Job 4 - Update ECR URI
 ![Job Update ECR URI](/images/circleci-job-update-ecr-uri.png)
 
 A imagem é atualizada com a nova URI e associada ao container da task definition.
