@@ -21,9 +21,6 @@ jobs:
             echo "export ECR_URI='${ECR_URI}'" >> "$BASH_ENV"
       - run: 
           name: Echo the variable
-          command: echo ${ECR_URI}
-      - run: 
-          name: Echo the variable
           command: echo ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${MY_APP_PREFIX}:${ECR_URI}
   test:
     docker:
