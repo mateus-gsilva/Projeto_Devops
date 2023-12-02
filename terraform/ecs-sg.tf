@@ -1,9 +1,9 @@
-resource "aws_security_group" "sg" {
-  name   = "ecs-sg"
-  vpc_id = aws_vpc.main.id
+resource "aws_security_group" "external" {
+  name        = "external_sg"
+  vpc_id      = aws_vpc.main.id
   description = "Inbound traffic 80 from anywhere"
 
-    ingress {
+  ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -12,7 +12,7 @@ resource "aws_security_group" "sg" {
     description = "http"
   }
 
-  ingress {
+  /*ingress {
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
@@ -20,6 +20,7 @@ resource "aws_security_group" "sg" {
     cidr_blocks = ["0.0.0.0/0"]
     description = "http"
   }
+  */
 
   egress {
     from_port   = 0
@@ -27,20 +28,21 @@ resource "aws_security_group" "sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(var.default_tags, {})
 }
 
-resource "aws_security_group" "alb" {
-  name   = "alb_sg"
-  vpc_id = aws_vpc.main.id
+resource "aws_security_group" "internal" {
+  name        = "internal_sg"
+  vpc_id      = aws_vpc.main.id
   description = "Container SG from ALB-SG"
 
-    ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    security_groups = [aws_security_group.sg.id]
+  ingress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    security_groups = [aws_security_group.external.id]
   }
-
 
   egress {
     from_port   = 0
@@ -48,4 +50,6 @@ resource "aws_security_group" "alb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(var.default_tags, {})
 }

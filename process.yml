@@ -1,0 +1,524 @@
+# Orb 'circleci/aws-ecr@8.1.0' resolved to 'circleci/aws-ecr@8.1.0'
+# Orb 'circleci/aws-ecs@3.2.0' resolved to 'circleci/aws-ecs@3.2.0'
+# Orb 'circleci/aws-cli@4.1.2' resolved to 'circleci/aws-cli@4.1.2'
+version: 2
+jobs:
+  test:
+    docker:
+    - image: node:latest
+    steps:
+    - checkout
+    - run:
+        name: Run npm test
+        command: cd ~/project/app/ && npm test
+  aws-ecr/build-and-push-image:
+    machine:
+      docker_layer_caching: false
+      image: ubuntu-2004:202107-02
+    resource_class: medium
+    steps:
+    - checkout
+    - run:
+        command: "if cat /etc/issue | grep \"Alpine\" >/dev/null 2>&1; then\n    if [ \"$ID\" = 0 ]; then export SUDO=\"\"; else export SUDO=\"sudo\"; fi\nelse \n    if [[ $EUID == 0 ]]; then export SUDO=\"\"; else export SUDO=\"sudo\"; fi\nfi\n\nInstall_AWS_CLI() {\n    echo \"Installing AWS CLI v2\"\n    cd /tmp || exit\n    # Platform check\n    if uname -a | grep \"Darwin\"; then\n        export SYS_ENV_PLATFORM=macos\n    elif uname -a | grep \"x86_64 GNU/Linux\"; then\n        export SYS_ENV_PLATFORM=linux_x86\n    elif uname -a | grep \"aarch64 GNU/Linux\"; then\n        export SYS_ENV_PLATFORM=linux_arm\n    elif uname -a | grep \"x86_64 Msys\"; then\n        export SYS_ENV_PLATFORM=windows\n    elif cat /etc/issue | grep \"Alpine\" >/dev/null 2>&1; then\n        export SYS_ENV_PLATFORM=linux_alpine\n    else\n        echo \"This platform appears to be unsupported.\"\n        uname -a\n        exit 1\n    fi\n\n    # Install per platform\n    case $SYS_ENV_PLATFORM in\n    linux_x86)\n        curl -sSL \"https://awscli.amazonaws.com/awscli-exe-linux-x86_64$1.zip\" -o \"awscliv2.zip\"\n        unzip -q -o awscliv2.zip\n        $SUDO ./aws/install -i \"${PARAM_AWS_CLI_INSTALL_DIR}\" -b \"${PARAM_AWS_CLI_BINARY_DIR}\"\n        rm -r awscliv2.zip ./aws\n        ;;\n    windows)\n        if [ ! \"$(command -v choco)\" ]; then\n            echo \"Chocolatey is required to uninstall AWS\"\n            exit 1\n        fi\n        choco install awscli --version=\"$1\"\n        echo \"$1\"\n        if echo \"$1\" | grep \"2.\"; then\n            echo 'export PATH=\"${PATH}:/c/Program Files/Amazon/AWSCLIV2\"' >>\"$BASH_ENV\"\n        else\n            echo 'export PATH=\"${PATH}:/c/Program Files/Amazon/AWSCLI/bin\"' >>\"$BASH_ENV\"\n        fi\n        ;;\n    macos)\n        curl -sSL \"https://awscli.amazonaws.com/AWSCLIV2$1.pkg\" -o \"AWSCLIV2.pkg\"\n        $SUDO installer -pkg AWSCLIV2.pkg -target /\n        rm AWSCLIV2.pkg\n        ;;\n    linux_arm)\n        curl -sSL \"https://awscli.amazonaws.com/awscli-exe-linux-aarch64$1.zip\" -o \"awscliv2.zip\"\n        unzip -q -o awscliv2.zip\n        $SUDO ./aws/install -i \"${PARAM_AWS_CLI_INSTALL_DIR}\" -b \"${PARAM_AWS_CLI_BINARY_DIR}\"\n        rm -r awscliv2.zip ./aws\n        ;;\n    linux_alpine)\n        apk --no-cache add \\\n            binutils \\\n            curl\n\n        curl -L https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub\n        curl -LO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.34-r0/glibc-2.34-r0.apk\n        curl -LO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.34-r0/glibc-bin-2.34-r0.apk\n        curl -LO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.34-r0/glibc-i18n-2.34-r0.apk\n\n        apk add --no-cache \\\n            glibc-2.34-r0.apk \\\n            glibc-bin-2.34-r0.apk \\\n            glibc-i18n-2.34-r0.apk\n\n        /usr/glibc-compat/bin/localedef -i en_US -f UTF-8 en_US.UTF-8\n        curl -sSL \"https://awscli.amazonaws.com/awscli-exe-linux-x86_64$1.zip\" -o \"awscliv2.zip\"\n\n        echo \"https://awscli.amazonaws.com/awscli-exe-linux-x86_64$1.zip\"\n        unzip awscliv2.zip\n        aws/install\n        rm -r awscliv2.zip ./aws\n        ;;\n    *)\n        echo \"This orb does not currently support your platform. If you believe it should, please consider opening an issue on the GitHub repository:\"\n        echo \"https://github.com/CircleCI-Public/aws-cli-orb/issues/new\"\n        exit 1\n        ;;\n    esac\n    # Toggle AWS Pager\n    if [ \"$PARAM_AWS_CLI_DISABLE_PAGER\" = 1 ]; then\n        if [ -z \"${AWS_PAGER+x}\" ]; then\n            echo 'export AWS_PAGER=\"\"' >>\"$BASH_ENV\"\n            echo \"AWS_PAGER is being set to the empty string to disable all output paging for AWS CLI commands.\"\n            echo \"You can set the 'disable-aws-pager' parameter to 'false' to disable this behavior.\"\n        fi\n    fi\n}\n\nUninstall_AWS_CLI() {\n    if uname -a | grep \"x86_64 Msys\"; then\n        if [ ! \"$(command -v choco)\" ]; then\n            echo \"Chocolatey is required to uninstall AWS\"\n            exit 1\n        fi\n        choco uninstall awscli\n    else\n        AWS_CLI_PATH=$(command -v aws)\n        echo \"$AWS_CLI_PATH\"\n        if [ -n \"$AWS_CLI_PATH\" ]; then\n            EXISTING_AWS_VERSION=$(aws --version)\n            echo \"Uninstalling ${EXISTING_AWS_VERSION}\"\n            # shellcheck disable=SC2012\n            if [ -L \"$AWS_CLI_PATH\" ]; then\n                AWS_SYMLINK_PATH=$(ls -l \"$AWS_CLI_PATH\" | sed -e 's/.* -> //')\n            fi\n            if uname -a | grep \"x86_64 Msys\"; then export SUDO=\"\"; fi\n            $SUDO rm -rf \"$AWS_CLI_PATH\" \"$AWS_SYMLINK_PATH\" \"$HOME/.aws/\" \"/usr/local/bin/aws\" \"/usr/local/bin/aws_completer\" \"/usr/local/aws-cli\"\n        else\n            echo \"No AWS install found\"\n        fi\n    fi\n}\n\nif [ ! \"$(command -v aws)\" ]; then\n    if [ \"$PARAM_AWS_CLI_VERSION\" = \"latest\" ]; then\n        Install_AWS_CLI\n    else\n        if uname -a | grep \"x86_64 Msys\"; then\n            Install_AWS_CLI \"${PARAM_AWS_CLI_VERSION}\"\n        else\n            Install_AWS_CLI \"-${PARAM_AWS_CLI_VERSION}\"\n        fi\n    fi\nelif [ \"$PARAM_AWS_CLI_OVERRIDE\" = 1 ]; then\n    Uninstall_AWS_CLI\n    if uname -a | grep \"x86_64 Msys\"; then\n        Install_AWS_CLI \"${PARAM_AWS_CLI_VERSION}\"\n    else\n        Install_AWS_CLI \"-${PARAM_AWS_CLI_VERSION}\"\n    fi\nelse\n    echo \"AWS CLI is already installed, skipping installation.\"\n    aws --version\nfi\n"
+        environment:
+          PARAM_AWS_CLI_BINARY_DIR: /usr/local/bin
+          PARAM_AWS_CLI_DISABLE_PAGER: true
+          PARAM_AWS_CLI_INSTALL_DIR: /usr/local/aws-cli
+          PARAM_AWS_CLI_OVERRIDE: false
+          PARAM_AWS_CLI_VERSION: latest
+        name: Install AWS CLI - latest
+    - run:
+        command: |
+          PARAM_AWS_CLI_ACCESS_KEY_ID=$(eval echo "\$$PARAM_AWS_CLI_ACCESS_KEY_ID")
+          PARAM_AWS_CLI_SECRET_ACCESS_KEY=$(eval echo "\$$PARAM_AWS_CLI_SECRET_ACCESS_KEY")
+          PARAM_AWS_CLI_REGION=$(eval echo "\$$PARAM_AWS_CLI_REGION")
+
+          aws configure set aws_access_key_id \
+              "$PARAM_AWS_CLI_ACCESS_KEY_ID" \
+              --profile "$PARAM_AWS_CLI_PROFILE_NAME"
+
+          aws configure set aws_secret_access_key \
+              "$PARAM_AWS_CLI_SECRET_ACCESS_KEY" \
+              --profile "$PARAM_AWS_CLI_PROFILE_NAME"
+
+          if [ -n "${AWS_SESSION_TOKEN}" ]; then
+              aws configure set aws_session_token \
+                  "${AWS_SESSION_TOKEN}" \
+                  --profile "$PARAM_AWS_CLI_PROFILE_NAME"
+          fi
+
+          if [ "$PARAM_AWS_CLI_CONFIG_DEFAULT_REGION" = "1" ]; then
+              aws configure set default.region "$PARAM_AWS_CLI_REGION" \
+                  --profile "$PARAM_AWS_CLI_PROFILE_NAME"
+          fi
+
+          if [ "$PARAM_AWS_CLI_CONFIG_PROFILE_REGION" = "1" ]; then
+              aws configure set region "$PARAM_AWS_CLI_REGION" \
+                  --profile "$PARAM_AWS_CLI_PROFILE_NAME"
+          fi
+        environment:
+          PARAM_AWS_CLI_ACCESS_KEY_ID: AWS_ACCESS_KEY_ID
+          PARAM_AWS_CLI_CONFIG_DEFAULT_REGION: true
+          PARAM_AWS_CLI_CONFIG_PROFILE_REGION: true
+          PARAM_AWS_CLI_PROFILE_NAME: default
+          PARAM_AWS_CLI_REGION: AWS_DEFAULT_REGION
+          PARAM_AWS_CLI_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY
+        name: Configure AWS Access Key ID
+    - run:
+        command: |
+          #!/bin/bash
+          PARAM_REGION=$(eval echo "${PARAM_REGION}")
+          PARAM_ACCOUNT_URL="${!PARAM_REGISTRY_ID}.dkr.ecr.${PARAM_REGION}.amazonaws.com"
+          ECR_COMMAND="ecr"
+
+          if [ "$PARAM_PUBLIC_REGISTRY" == "1" ]; then
+              PARAM_REGION="us-east-1"
+              PARAM_ACCOUNT_URL="public.ecr.aws"
+              ECR_COMMAND="ecr-public"
+          fi
+
+          if [ -n "${PARAM_PROFILE_NAME}" ]; then
+              set -- "$@" --profile "${PARAM_PROFILE_NAME}"
+          fi
+
+          if [ -f ~/.docker/config.json ]; then
+              echo "Credential helper is already installed"
+          else
+              aws "${ECR_COMMAND}" get-login-password --region "${PARAM_REGION}" "$@" | docker login --username AWS --password-stdin "${PARAM_ACCOUNT_URL}"
+          fi
+        environment:
+          PARAM_PROFILE_NAME: default
+          PARAM_PUBLIC_REGISTRY: false
+          PARAM_REGION: ${AWS_REGION}
+          PARAM_REGISTRY_ID: AWS_ECR_REGISTRY_ID
+        name: Log into Amazon ECR with profile default
+    - run:
+        command: |
+          #!/bin/bash
+          PARAM_REGION=$(eval echo "${PARAM_REGION}")
+          PARAM_REPO=$(eval echo "${PARAM_REPO}")
+          PARAM_TAG=$(eval echo "${PARAM_TAG}")
+          PARAM_ACCOUNT_URL="${!PARAM_REGISTRY_ID}.dkr.ecr.${PARAM_REGION}.amazonaws.com"
+          ECR_COMMAND="ecr"
+          number_of_tags_in_ecr=0
+          docker_tag_args=""
+
+          IFS="," read -ra PLATFORMS <<<"${PARAM_PLATFORM}"
+          arch_count=${#PLATFORMS[@]}
+
+          if [ "${PARAM_PUBLIC_REGISTRY}" == "1" ]; then
+            if [ "$arch_count" -gt 1 ]; then
+              echo "AWS ECR does not support multiple platforms for public registries. Please specify only one platform and try again"
+              exit 1
+            fi
+
+            ECR_COMMAND="ecr-public"
+            PARAM_ACCOUNT_URL="public.ecr.aws/${!PARAM_REGISTRY_ID}"
+          fi
+
+          IFS="," read -ra DOCKER_TAGS <<<"${PARAM_TAG}"
+          for tag in "${DOCKER_TAGS[@]}"; do
+            if [ "${PARAM_SKIP_WHEN_TAGS_EXIST}" = "1" ]; then
+              docker_tag_exists_in_ecr=$(aws "${ECR_COMMAND}" describe-images --profile "${PARAM_PROFILE_NAME}" --registry-id "${!PARAM_REGISTRY_ID}" --region "${PARAM_REGION}" --repository-name "${PARAM_REPO}" --query "contains(imageDetails[].imageTags[], '${tag}')")
+              if [ "${docker_tag_exists_in_ecr}" = "1" ]; then
+                docker pull "${PARAM_ACCOUNT_URL}/${PARAM_REPO}:${tag}"
+                number_of_tags_in_ecr=$((number_of_tags_in_ecr += 1))
+              fi
+            fi
+            docker_tag_args="${docker_tag_args} -t ${PARAM_ACCOUNT_URL}/${PARAM_REPO}:${tag}"
+          done
+
+          if [ "${PARAM_SKIP_WHEN_TAGS_EXIST}" = "0" ] || [[ "${PARAM_SKIP_WHEN_TAGS_EXIST}" = "1" && ${number_of_tags_in_ecr} -lt ${#DOCKER_TAGS[@]} ]]; then
+            if [ "${PARAM_PUSH_IMAGE}" == "1" ]; then
+              set -- "$@" --push
+
+              if [ -n "${PARAM_LIFECYCLE_POLICY_PATH}" ]; then
+                aws ecr put-lifecycle-policy \
+                  --repository-name "${PARAM_REPO}" \
+                  --lifecycle-policy-text "${PARAM_LIFECYCLE_POLICY_PATH}"
+              fi
+
+            else
+              set -- "$@" --load
+            fi
+
+            if [ -n "$PARAM_EXTRA_BUILD_ARGS" ]; then
+              set -- "$@" ${PARAM_EXTRA_BUILD_ARGS}
+            fi
+
+            if [ "${PARAM_PUBLIC_REGISTRY}" == "1" ]; then
+              docker buildx build \
+                -f "${PARAM_PATH}"/"${PARAM_DOCKERFILE}" \
+                ${docker_tag_args} \
+                --platform "${PARAM_PLATFORM}" \
+                --progress plain \
+                "$@" \
+                "${PARAM_PATH}"
+            else
+              docker context create builder
+              docker run --privileged --rm tonistiigi/binfmt --install all
+              docker --context builder buildx create --use
+              docker --context builder buildx build \
+                -f "${PARAM_PATH}"/"${PARAM_DOCKERFILE}" \
+                ${docker_tag_args} \
+                --platform "${PARAM_PLATFORM}" \
+                --progress plain \
+                "$@" \
+                "${PARAM_PATH}"
+            fi
+          fi
+        environment:
+          PARAM_DOCKERFILE: Dockerfile
+          PARAM_EXTRA_BUILD_ARGS: ''
+          PARAM_LIFECYCLE_POLICY_PATH: ''
+          PARAM_PATH: .
+          PARAM_PLATFORM: linux/amd64
+          PARAM_PROFILE_NAME: default
+          PARAM_PUBLIC_REGISTRY: false
+          PARAM_PUSH_IMAGE: true
+          PARAM_REGION: ${AWS_REGION}
+          PARAM_REGISTRY_ID: AWS_ECR_REGISTRY_ID
+          PARAM_REPO: ${MY_APP_PREFIX}
+          PARAM_SKIP_WHEN_TAGS_EXIST: false
+          PARAM_TAG: ${CIRCLE_SHA1}
+        name: Build Docker Image with buildx
+        no_output_timeout: 10m
+  aws-ecs/deploy-service-update:
+    docker:
+    - image: cimg/python:3.10.4
+    steps:
+    - run:
+        command: |
+          if cat /etc/issue | grep "Alpine" >/dev/null 2>&1; then
+              if [ "$ID" = 0 ]; then export SUDO=""; else export SUDO="sudo"; fi
+          else
+              if [[ $EUID == 0 ]]; then export SUDO=""; else export SUDO="sudo"; fi
+          fi
+
+          Install_AWS_CLI() {
+              echo "Installing AWS CLI v2"
+              cd /tmp || exit
+              # Platform check
+              if uname -a | grep "Darwin"; then
+                  export SYS_ENV_PLATFORM=macos
+              elif uname -a | grep "x86_64 GNU/Linux"; then
+                  export SYS_ENV_PLATFORM=linux_x86
+              elif uname -a | grep "aarch64 GNU/Linux"; then
+                  export SYS_ENV_PLATFORM=linux_arm
+              elif uname -a | grep "x86_64 Msys"; then
+                  export SYS_ENV_PLATFORM=windows
+              elif cat /etc/issue | grep "Alpine" >/dev/null 2>&1; then
+                  export SYS_ENV_PLATFORM=linux_alpine
+              else
+                  echo "This platform appears to be unsupported."
+                  uname -a
+                  exit 1
+              fi
+
+              # Install per platform
+              case $SYS_ENV_PLATFORM in
+              linux_x86)
+                  curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64$1.zip" -o "awscliv2.zip"
+                  unzip -q -o awscliv2.zip
+                  $SUDO ./aws/install -i "${PARAM_AWS_CLI_INSTALL_DIR}" -b "${PARAM_AWS_CLI_BINARY_DIR}"
+                  rm -r awscliv2.zip ./aws
+                  ;;
+              windows)
+                  if [ ! "$(command -v choco)" ]; then
+                      echo "Chocolatey is required to uninstall AWS"
+                      exit 1
+                  fi
+                  choco install awscli --version="$1"
+                  echo "$1"
+                  if echo "$1" | grep "2."; then
+                      echo 'export PATH="${PATH}:/c/Program Files/Amazon/AWSCLIV2"' >>"$BASH_ENV"
+                  else
+                      echo 'export PATH="${PATH}:/c/Program Files/Amazon/AWSCLI/bin"' >>"$BASH_ENV"
+                  fi
+                  ;;
+              macos)
+                  curl -sSL "https://awscli.amazonaws.com/AWSCLIV2$1.pkg" -o "AWSCLIV2.pkg"
+                  $SUDO installer -pkg AWSCLIV2.pkg -target /
+                  rm AWSCLIV2.pkg
+                  ;;
+              linux_arm)
+                  curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64$1.zip" -o "awscliv2.zip"
+                  unzip -q -o awscliv2.zip
+                  $SUDO ./aws/install -i "${PARAM_AWS_CLI_INSTALL_DIR}" -b "${PARAM_AWS_CLI_BINARY_DIR}"
+                  rm -r awscliv2.zip ./aws
+                  ;;
+              linux_alpine)
+                  apk --no-cache add \
+                      binutils \
+                      curl
+
+                  curl -L https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub -o /etc/apk/keys/sgerrand.rsa.pub
+                  curl -LO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.34-r0/glibc-2.34-r0.apk
+                  curl -LO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.34-r0/glibc-bin-2.34-r0.apk
+                  curl -LO https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.34-r0/glibc-i18n-2.34-r0.apk
+
+                  apk add --no-cache \
+                      glibc-2.34-r0.apk \
+                      glibc-bin-2.34-r0.apk \
+                      glibc-i18n-2.34-r0.apk
+
+                  /usr/glibc-compat/bin/localedef -i en_US -f UTF-8 en_US.UTF-8
+                  curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64$1.zip" -o "awscliv2.zip"
+
+                  echo "https://awscli.amazonaws.com/awscli-exe-linux-x86_64$1.zip"
+                  unzip awscliv2.zip
+                  aws/install
+                  rm -r awscliv2.zip ./aws
+                  ;;
+              *)
+                  echo "This orb does not currently support your platform. If you believe it should, please consider opening an issue on the GitHub repository:"
+                  echo "https://github.com/CircleCI-Public/aws-cli-orb/issues/new"
+                  exit 1
+                  ;;
+              esac
+              # Toggle AWS Pager
+              if [ "$PARAM_AWS_CLI_DISABLE_PAGER" = 1 ]; then
+                  if [ -z "${AWS_PAGER+x}" ]; then
+                      echo 'export AWS_PAGER=""' >>"$BASH_ENV"
+                      echo "AWS_PAGER is being set to the empty string to disable all output paging for AWS CLI commands."
+                      echo "You can set the 'disable-aws-pager' parameter to 'false' to disable this behavior."
+                  fi
+              fi
+          }
+
+          Uninstall_AWS_CLI() {
+              if uname -a | grep "x86_64 Msys"; then
+                  if [ ! "$(command -v choco)" ]; then
+                      echo "Chocolatey is required to uninstall AWS"
+                      exit 1
+                  fi
+                  choco uninstall awscli
+              else
+                  AWS_CLI_PATH=$(command -v aws)
+                  echo "$AWS_CLI_PATH"
+                  if [ -n "$AWS_CLI_PATH" ]; then
+                      EXISTING_AWS_VERSION=$(aws --version)
+                      echo "Uninstalling ${EXISTING_AWS_VERSION}"
+                      # shellcheck disable=SC2012
+                      if [ -L "$AWS_CLI_PATH" ]; then
+                          AWS_SYMLINK_PATH=$(ls -l "$AWS_CLI_PATH" | sed -e 's/.* -> //')
+                      fi
+                      if uname -a | grep "x86_64 Msys"; then export SUDO=""; fi
+                      $SUDO rm -rf "$AWS_CLI_PATH" "$AWS_SYMLINK_PATH" "$HOME/.aws/" "/usr/local/bin/aws" "/usr/local/bin/aws_completer" "/usr/local/aws-cli"
+                  else
+                      echo "No AWS install found"
+                  fi
+              fi
+          }
+
+          if [ ! "$(command -v aws)" ]; then
+              if [ "$PARAM_AWS_CLI_VERSION" = "latest" ]; then
+                  Install_AWS_CLI
+              else
+                  if uname -a | grep "x86_64 Msys"; then
+                      Install_AWS_CLI "${PARAM_AWS_CLI_VERSION}"
+                  else
+                      Install_AWS_CLI "-${PARAM_AWS_CLI_VERSION}"
+                  fi
+              fi
+          elif [ "$PARAM_AWS_CLI_OVERRIDE" = 1 ]; then
+              Uninstall_AWS_CLI
+              if uname -a | grep "x86_64 Msys"; then
+                  Install_AWS_CLI "${PARAM_AWS_CLI_VERSION}"
+              else
+                  Install_AWS_CLI "-${PARAM_AWS_CLI_VERSION}"
+              fi
+          else
+              echo "AWS CLI is already installed, skipping installation."
+              aws --version
+          fi
+        environment:
+          PARAM_AWS_CLI_BINARY_DIR: /usr/local/bin
+          PARAM_AWS_CLI_DISABLE_PAGER: true
+          PARAM_AWS_CLI_INSTALL_DIR: /usr/local/aws-cli
+          PARAM_AWS_CLI_OVERRIDE: false
+          PARAM_AWS_CLI_VERSION: latest
+        name: Install AWS CLI - latest
+    - run:
+        command: "#!/bin/sh\nif cat /etc/issue | grep \"Alpine\" >/dev/null 2>&1; then\n    . $BASH_ENV\nfi\n\nPARAM_AWS_CLI_ACCESS_KEY_ID=$(eval echo \"\\$$PARAM_AWS_CLI_ACCESS_KEY_ID\")\nPARAM_AWS_CLI_SECRET_ACCESS_KEY=$(eval echo \"\\$$PARAM_AWS_CLI_SECRET_ACCESS_KEY\")\nPARAM_AWS_CLI_REGION=$(eval echo \"\\$$PARAM_AWS_CLI_REGION\")\n\nif [ -z \"$PARAM_AWS_CLI_ACCESS_KEY_ID\" ] || [ -z \"${PARAM_AWS_CLI_SECRET_ACCESS_KEY}\" ]; then \n    echo \"Cannot configure profile. AWS access key id and AWS secret access key must be provided.\"\n    exit 1\nfi\n\naws configure set aws_access_key_id \\\n    \"$PARAM_AWS_CLI_ACCESS_KEY_ID\" \\\n    --profile \"$PARAM_AWS_CLI_PROFILE_NAME\"\n\naws configure set aws_secret_access_key \\\n    \"$PARAM_AWS_CLI_SECRET_ACCESS_KEY\" \\\n    --profile \"$PARAM_AWS_CLI_PROFILE_NAME\"\n\nif [ -n \"${AWS_SESSION_TOKEN}\" ]; then\n    aws configure set aws_session_token \\\n        \"${AWS_SESSION_TOKEN}\" \\\n        --profile \"$PARAM_AWS_CLI_PROFILE_NAME\"\nfi\n\nif [ \"$PARAM_AWS_CLI_CONFIG_DEFAULT_REGION\" = \"1\" ]; then\n    aws configure set default.region \"$PARAM_AWS_CLI_REGION\" \\\n        --profile \"$PARAM_AWS_CLI_PROFILE_NAME\"\nfi\n\nif [ \"$PARAM_AWS_CLI_CONFIG_PROFILE_REGION\" = \"1\" ]; then\n    aws configure set region \"$PARAM_AWS_CLI_REGION\" \\\n        --profile \"$PARAM_AWS_CLI_PROFILE_NAME\"\nfi\n"
+        environment:
+          PARAM_AWS_CLI_ACCESS_KEY_ID: AWS_ACCESS_KEY_ID
+          PARAM_AWS_CLI_CONFIG_DEFAULT_REGION: true
+          PARAM_AWS_CLI_CONFIG_PROFILE_REGION: true
+          PARAM_AWS_CLI_PROFILE_NAME: ''
+          PARAM_AWS_CLI_REGION: AWS_REGION
+          PARAM_AWS_CLI_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY
+        name: Configure AWS Access Key ID
+    - run:
+        command: "set -o noglob\n\n# These variables are evaluated so the config file may contain and pass in environment variables to the parameters.\nECS_PARAM_FAMILY=$(eval echo \"$ECS_PARAM_FAMILY\")\nECS_PARAM_CONTAINER_IMAGE_NAME_UPDATES=$(eval echo \"$ECS_PARAM_CONTAINER_IMAGE_NAME_UPDATES\")\nECS_PARAM_CONTAINER_ENV_VAR_UPDATES=$(eval echo \"$ECS_PARAM_CONTAINER_ENV_VAR_UPDATES\")\nECS_PARAM_PROFILE_NAME=$(eval echo \"$ECS_PARAM_PROFILE_NAME\")\nECS_PARAM_CONTAINER_SECRET_UPDATES=$(eval echo \"$ECS_PARAM_CONTAINER_SECRET_UPDATES\")\nECS_PARAM_CONTAINER_DOCKER_LABEL_UPDATES=$(eval echo \"$ECS_PARAM_CONTAINER_DOCKER_LABEL_UPDATES\")\n\nif [ -n \"${ECS_PARAM_PROFILE_NAME}\" ]; then\n    set -- \"$@\" --profile \"${ECS_PARAM_PROFILE_NAME}\"   \nfi\n\nif [ -z \"${ECS_PARAM_PREVIOUS_REVISION}\" ]; then\n  ECS_TASK_DEFINITION_NAME=\"$ECS_PARAM_FAMILY\"\nelse\n  ECS_TASK_DEFINITION_NAME=\"$ECS_PARAM_FAMILY:$ECS_PARAM_PREVIOUS_REVISION_NUMBER\"\nfi\n\n# shellcheck disable=SC2034\nPREVIOUS_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition \"${ECS_TASK_DEFINITION_NAME}\" --include TAGS \"$@\")\n\n# Prepare script for updating container definitions\n\nUPDATE_CONTAINER_DEFS_SCRIPT_FILE=$(mktemp _update_container_defs.py.XXXXXX)\nchmod +x \"$UPDATE_CONTAINER_DEFS_SCRIPT_FILE\"\n\ncat <<< \"$ECS_SCRIPT_UPDATE_CONTAINER_DEFS\" > \"$UPDATE_CONTAINER_DEFS_SCRIPT_FILE\"\n\n\n# Prepare container definitions\nCONTAINER_DEFS=$(python \"$UPDATE_CONTAINER_DEFS_SCRIPT_FILE\" \"$PREVIOUS_TASK_DEFINITION\" \"$ECS_PARAM_CONTAINER_IMAGE_NAME_UPDATES\" \"$ECS_PARAM_CONTAINER_ENV_VAR_UPDATES\" \"$ECS_PARAM_CONTAINER_SECRET_UPDATES\" \"$ECS_PARAM_CONTAINER_DOCKER_LABEL_UPDATES\")\n\n# Escape single quotes from environment variables for BASH_ENV\n\nCLEANED_CONTAINER_DEFS=$(echo \"$CONTAINER_DEFS\" | sed -E \"s:':'\\\\\\'':g\")\n\n# Prepare script for getting task definition values\n\nGET_TASK_DFN_VAL_SCRIPT_FILE=$(mktemp _get_task_def_value.py.XXXXXX)\nchmod +x \"$GET_TASK_DFN_VAL_SCRIPT_FILE\"\n\ncat <<< \"$ECS_SCRIPT_GET_TASK_DFN_VAL\" > \"$GET_TASK_DFN_VAL_SCRIPT_FILE\"\n\n\n\n# Get other task definition values\n\nTASK_ROLE=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'taskRoleArn' \"$PREVIOUS_TASK_DEFINITION\")\n\nEXECUTION_ROLE=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'executionRoleArn' \"$PREVIOUS_TASK_DEFINITION\")\n\nNETWORK_MODE=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'networkMode' \"$PREVIOUS_TASK_DEFINITION\")\n\nVOLUMES=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'volumes' \"$PREVIOUS_TASK_DEFINITION\")\n\nPLACEMENT_CONSTRAINTS=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'placementConstraints' \"$PREVIOUS_TASK_DEFINITION\")\n\nREQ_COMP=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'requiresCompatibilities' \"$PREVIOUS_TASK_DEFINITION\")\n\nTASK_CPU=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'cpu' \"$PREVIOUS_TASK_DEFINITION\")\n\nTASK_MEMORY=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'memory' \"$PREVIOUS_TASK_DEFINITION\")\n\nPID_MODE=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'pidMode' \"$PREVIOUS_TASK_DEFINITION\")\n\nIPC_MODE=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'ipcMode' \"$PREVIOUS_TASK_DEFINITION\")\n\nTAGS=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'tags' \"$PREVIOUS_TASK_DEFINITION\")\n\nPROXY_CONFIGURATION=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'proxyConfiguration' \"$PREVIOUS_TASK_DEFINITION\")\n\nRUNTIME_PLATFORM=$(python \"$GET_TASK_DFN_VAL_SCRIPT_FILE\" 'runtimePlatform' \"$PREVIOUS_TASK_DEFINITION\")\n\nEPHEMERAL_STORAGE=$(echo \"${PREVIOUS_TASK_DEFINITION}\" | jq \".taskDefinition.ephemeralStorage //empty\" -c)\n\n# Make task definition values available as env variables\n# shellcheck disable=SC2129\necho \"export CCI_ORB_AWS_ECS_TASK_ROLE='${TASK_ROLE}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_EXECUTION_ROLE='${EXECUTION_ROLE}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_NETWORK_MODE='${NETWORK_MODE}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_CONTAINER_DEFS='${CLEANED_CONTAINER_DEFS}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_VOLUMES='${VOLUMES}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_PLACEMENT_CONSTRAINTS='${PLACEMENT_CONSTRAINTS}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_REQ_COMP='${REQ_COMP}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_TASK_CPU='${TASK_CPU}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_TASK_MEMORY='${TASK_MEMORY}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_PID_MODE='${PID_MODE}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_IPC_MODE='${IPC_MODE}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_TAGS='${TAGS}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_PROXY_CONFIGURATION='${PROXY_CONFIGURATION}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_RUNTIME_PLATFORM='${RUNTIME_PLATFORM}'\" >> \"$BASH_ENV\"\n\necho \"export CCI_ORB_AWS_ECS_EPHEMERAL_STORAGE='${EPHEMERAL_STORAGE}'\" >> \"$BASH_ENV\"\n\nrm \"$UPDATE_CONTAINER_DEFS_SCRIPT_FILE\" \"$GET_TASK_DFN_VAL_SCRIPT_FILE\"\n"
+        environment:
+          ECS_PARAM_CONTAINER_DOCKER_LABEL_UPDATES: ''
+          ECS_PARAM_CONTAINER_ENV_VAR_UPDATES: ''
+          ECS_PARAM_CONTAINER_IMAGE_NAME_UPDATES: container=${MY_APP_PREFIX}-service,tag=${CIRCLE_SHA1}
+          ECS_PARAM_CONTAINER_SECRET_UPDATES: ''
+          ECS_PARAM_FAMILY: ${MY_APP_PREFIX}-service
+          ECS_PARAM_PREVIOUS_REVISION_NUMBER: ''
+          ECS_PARAM_PROFILE_NAME: ''
+          ECS_SCRIPT_GET_TASK_DFN_VAL: |
+            from __future__ import absolute_import
+            import sys
+            import json
+
+            def run(element_name, task_definition_str):
+                try:
+                    definition = json.loads(task_definition_str)
+                    task_definition = definition['taskDefinition']
+                except:
+                    raise Exception('No valid task definition found: ' + task_definition_str)
+                str_list_types = ['requiresCompatibilities']
+                json_arr_types = ['placementConstraints', 'volumes', 'tags']
+                json_obj_types = ['proxyConfiguration', 'runtimePlatform']
+                if element_name in json_arr_types:
+                    output_value = '[]'
+                elif element_name in json_obj_types:
+                    output_value = '{}'
+                else:
+                    output_value = ''
+                if element_name == 'tags':
+                    if element_name in definition:
+                        element_value = definition[element_name]
+                        output_value = json.dumps(element_value)
+                elif element_name in task_definition:
+                    element_value = task_definition[element_name]
+                    if element_name in str_list_types:
+                        output_value = ' '.join(list_item.strip() for list_item in element_value)
+                    elif element_name in json_arr_types or element_name in json_obj_types:
+                        output_value = json.dumps(element_value)
+                    else:
+                        output_value = str(element_value)
+                return output_value
+
+
+            if __name__ == '__main__':
+                try:
+                    print(run(sys.argv[1], sys.argv[2]))
+                except Exception as e:
+                    sys.stderr.write(str(e) + "\n")
+                    exit(1)
+          ECS_SCRIPT_UPDATE_CONTAINER_DEFS: "from __future__ import absolute_import\nimport sys\nimport json\n\n# shellcheck disable=SC1036  # Hold-over from previous iteration.\ndef run(previous_task_definition, container_image_name_updates,\n        container_env_var_updates, container_secret_updates, container_docker_label_updates):\n    try:\n        definition = json.loads(previous_task_definition)\n        container_definitions = definition['taskDefinition']['containerDefinitions']\n    except:\n        raise Exception('No valid task definition found: ' + previous_task_definition)\n\n    # Build a map of the original container definitions so that the\n    # array index positions can be easily looked up\n    container_map = {}\n    for index, container_definition in enumerate(container_definitions):\n        env_var_map = {}\n        env_var_definitions = container_definition.get('environment')\n        if env_var_definitions is not None:\n            for env_var_index, env_var_definition in enumerate(env_var_definitions):\n                env_var_map[env_var_definition['name']] = {'index': env_var_index}\n        container_map[container_definition['name']] = {'image': container_definition['image'], 'index': index, 'environment_map': env_var_map}\n\n    # Expected format: container=...,name=...,value=...,container=...,name=...,value=\n    try:\n        env_kv_pairs = container_env_var_updates.split(',')\n        for index, kv_pair in enumerate(env_kv_pairs):\n            kv = kv_pair.split('=')\n            key = kv[0].strip()\n\n            if key == 'container':\n                container_name = kv[1].strip()\n                env_var_name_kv = env_kv_pairs[index+1].split('=')\n                env_var_name = env_var_name_kv[1].strip()\n                env_var_value_kv = env_kv_pairs[index+2].split('=', maxsplit=1)\n                env_var_value = env_var_value_kv[1].strip()\n                if env_var_name_kv[0].strip() != 'name' or env_var_value_kv[0].strip() != 'value':\n                    raise ValueError(\n                        'Environment variable update parameter format is incorrect: ' + container_env_var_updates)\n\n                container_entry = container_map.get(container_name)\n                if container_entry is None:\n                    raise ValueError('The container ' + container_name + ' is not defined in the existing task definition')\n                container_index = container_entry['index']\n                env_var_entry = container_entry['environment_map'].get(env_var_name)\n                if env_var_entry is None:\n                    # The existing container definition does not contain environment variables\n                    if container_definitions[container_index].get('environment') is None:\n                        container_definitions[container_index]['environment'] = []\n                    # This env var does not exist in the existing container definition\n                    container_definitions[container_index]['environment'].append({'name': env_var_name, 'value': env_var_value})\n                else:\n                    env_var_index = env_var_entry['index']\n                    container_definitions[container_index]['environment'][env_var_index]['value'] = env_var_value\n            elif key and key not in ['container', 'name', 'value']:\n                raise ValueError('Incorrect key found in environment variable update parameter: ' + key)\n    except ValueError as value_error:\n        raise value_error\n    except:\n        raise Exception('Environment variable update parameter could not be processed; please check parameter value: ' + container_env_var_updates)\n\n    # Expected format: container=...,string=...,string=...,container=...,string=...,string=\n    \n    try:\n        docker_label_kv_pairs = container_docker_label_updates.split(',')\n        for index, kv_pair in enumerate(docker_label_kv_pairs):\n            kv = kv_pair.split('=')\n            key = kv[0].strip()\n\n            if key == 'container':\n                container_name = kv[1].strip()\n                docker_label_kv = docker_label_kv_pairs[index+1].split('=')\n                docker_label_key = docker_label_kv[0].strip()\n                docker_label_value = docker_label_kv[1].strip()\n                container_entry = container_map.get(container_name)\n                if container_entry is None:\n                    raise ValueError('The container ' + container_name + ' is not defined in the existing task definition')\n                container_index = container_entry['index']\n                docker_label_entry = container_entry['environment_map'].get(docker_label_key)\n                if docker_label_entry is None:\n                    # The existing container definition does not contain environment variables\n                    if container_definitions[container_index].get('dockerLabels') is None:\n                        container_definitions[container_index]['dockerLabels'] = {}\n                    # This env var does not exist in the existing container definition\n                    container_definitions[container_index]['dockerLabels'][docker_label_key] =  docker_label_value\n                else:\n                    docker_label_index = docker_label_entry['index']\n                    container_definitions[container_index]['dockerLabels'][docker_label_index][docker_label_key] = docker_label_value\n    except ValueError as value_error:\n        raise value_error\n    except:\n        raise Exception('Docker label update parameter could not be processed; please check parameter value: ' + container_docker_label_updates)\n\n    # Expected format: container=...,name=...,valueFrom=...,container=...,name=...,valueFrom=...\n\n    try:\n        secret_kv_pairs = container_secret_updates.split(',')\n        for index, kv_pair in enumerate(secret_kv_pairs):\n            kv = kv_pair.split('=')\n            key = kv[0].strip()\n            if key == 'container':\n                container_name = kv[1].strip()\n                secret_name_kv = secret_kv_pairs[index+1].split('=')\n                secret_name = secret_name_kv[1].strip()\n                secret_value_kv = secret_kv_pairs[index+2].split('=', maxsplit=1)\n                secret_value = secret_value_kv[1].strip()\n                if secret_name_kv[0].strip() != 'name' or secret_value_kv[0].strip() != 'valueFrom':\n                    raise ValueError(\n                        'Container secret update parameter format is incorrect: ' + container_secret_updates)\n\n                container_entry = container_map.get(container_name)\n                if container_entry is None:\n                    raise ValueError('The container ' + container_name + ' is not defined in the existing task definition')\n                container_index = container_entry['index']\n                secret_entry = container_entry['environment_map'].get(secret_name)\n                if secret_entry is None:\n                    # The existing container definition does not contain secrets variable\n                    if container_definitions[container_index].get('secrets') is None:\n                        container_definitions[container_index]['secrets'] = []\n                    # The secrets variable does not exist in the existing container definition\n                    container_definitions[container_index]['secrets'].append({'name': secret_name, 'valueFrom': secret_value})\n                else:\n                    secret_index = secret_entry['index']\n                    container_definitions[container_index]['secrets'][secret_index]['valueFrom'] = secret_value\n            elif key and key not in ['container', 'name', 'valueFrom']:\n                raise ValueError('Incorrect key found in secret updates parameter: ' + key)\n    except ValueError as value_error:\n        raise value_error\n    except:\n        raise Exception('Container secrets update parameter could not be processed; please check parameter value: ' + container_secret_updates)\n\n    # Expected format: container=...,image-and-tag|image|tag=...,container=...,image-and-tag|image|tag=...,\n    try:\n        if container_image_name_updates and \"container=\" not in container_image_name_updates:\n            raise ValueError('The container parameter is required in the container_image_name_updates variable.')\n\n        image_kv_pairs = container_image_name_updates.split(',')\n        for index, kv_pair in enumerate(image_kv_pairs):\n            kv = kv_pair.split('=')\n            key = kv[0].strip()\n            if key == 'container':\n                container_name = kv[1].strip()\n                image_kv = image_kv_pairs[index+1].split('=')\n                container_entry = container_map.get(container_name)\n                if container_entry is None:\n                    raise ValueError('The container ' + container_name + ' is not defined in the existing task definition')\n                container_index = container_entry['index']\n                image_specifier_type = image_kv[0].strip()\n                image_value = image_kv[1].strip()\n                if image_specifier_type == 'image-and-tag':\n                    container_definitions[container_index]['image'] = image_value\n                else:\n                    existing_image_name_tokens = container_entry['image'].split(':')\n                    if image_specifier_type == 'image':\n                        tag = ''\n                        if len(existing_image_name_tokens) == 2:\n                            tag = ':' + existing_image_name_tokens[1]\n                        container_definitions[container_index]['image'] = image_value + tag\n                    elif image_specifier_type == 'tag':\n                        container_definitions[container_index]['image'] = existing_image_name_tokens[0] + ':' + image_value\n                    else:\n                        raise ValueError(\n                            'Image name update parameter format is incorrect: ' + container_image_name_updates)\n            elif key and key not in ['container', 'image', 'image-and-tag', 'tag']:\n                raise ValueError('Incorrect key found in image name update parameter: ' + key)\n\n    except ValueError as value_error:\n        raise value_error\n    except:\n        raise Exception('Image name update parameter could not be processed; please check parameter value: ' + container_image_name_updates)\n    return json.dumps(container_definitions)\n\n\nif __name__ == '__main__':\n    try:\n        print(run(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5]))\n    except Exception as e:\n        sys.stderr.write(str(e) + \"\\n\")\n        exit(1)\n"
+        name: Retrieve previous task definition and prepare new task definition values
+    - run:
+        command: |
+          set -o noglob
+
+          # These variables are evaluated so the config file may contain and pass in environment variables to the parameters.
+          ECS_PARAM_FAMILY=$(eval echo "$ECS_PARAM_FAMILY")
+          ECS_PARAM_PROFILE_NAME=$(eval echo "$ECS_PARAM_PROFILE_NAME")
+
+          if [ -n "${CCI_ORB_AWS_ECS_TASK_ROLE}" ]; then
+              set -- "$@" --task-role-arn "${CCI_ORB_AWS_ECS_TASK_ROLE}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_EXECUTION_ROLE}" ]; then
+              set -- "$@" --execution-role-arn "${CCI_ORB_AWS_ECS_EXECUTION_ROLE}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_NETWORK_MODE}" ]; then
+              set -- "$@" --network-mode "${CCI_ORB_AWS_ECS_NETWORK_MODE}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_VOLUMES}" ] && [ "${CCI_ORB_AWS_ECS_VOLUMES}" != "[]" ]; then
+              set -- "$@" --volumes "${CCI_ORB_AWS_ECS_VOLUMES}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_PLACEMENT_CONSTRAINTS}" ] && [ "${CCI_ORB_AWS_ECS_PLACEMENT_CONSTRAINTS}" != "[]" ]; then
+              set -- "$@" --placement-constraints "${CCI_ORB_AWS_ECS_PLACEMENT_CONSTRAINTS}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_REQ_COMP}" ] && [ "${CCI_ORB_AWS_ECS_REQ_COMP}" != "[]" ]; then
+              #shellcheck disable=SC2086
+              set -- "$@" --requires-compatibilities ${CCI_ORB_AWS_ECS_REQ_COMP}
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_TASK_CPU}" ]; then
+              set -- "$@" --cpu "${CCI_ORB_AWS_ECS_TASK_CPU}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_TASK_MEMORY}" ]; then
+              set -- "$@" --memory "${CCI_ORB_AWS_ECS_TASK_MEMORY}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_PID_MODE}" ]; then
+              set -- "$@" --pid-mode "${CCI_ORB_AWS_ECS_PID_MODE}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_IPC_MODE}" ]; then
+              set -- "$@" --ipc-mode "${CCI_ORB_AWS_ECS_IPC_MODE}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_TAGS}" ] && [ "${CCI_ORB_AWS_ECS_TAGS}" != "[]" ]; then
+              set -- "$@" --tags "${CCI_ORB_AWS_ECS_TAGS}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_PROXY_CONFIGURATION}" ] && [ "${CCI_ORB_AWS_ECS_PROXY_CONFIGURATION}" != "{}" ]; then
+              set -- "$@" --proxy-configuration "${CCI_ORB_AWS_ECS_PROXY_CONFIGURATION}"
+          fi
+
+          if [ -n "${ECS_PARAM_PROFILE_NAME}" ]; then
+              set -- "$@" --profile "${ECS_PARAM_PROFILE_NAME}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_RUNTIME_PLATFORM}" ] && [ "${CCI_ORB_AWS_ECS_RUNTIME_PLATFORM}" != "{}" ]; then
+              set -- "$@" --runtime-platform "${CCI_ORB_AWS_ECS_RUNTIME_PLATFORM}"
+          fi
+
+          if [ -n "${CCI_ORB_AWS_ECS_EPHEMERAL_STORAGE}" ] && [ "${CCI_ORB_AWS_ECS_EPHEMERAL_STORAGE}" != "{}" ]; then
+              set -- "$@" --ephemeral-storage "${CCI_ORB_AWS_ECS_EPHEMERAL_STORAGE}"
+          fi
+
+          REVISION=$(aws ecs register-task-definition \
+              --family "$ECS_PARAM_FAMILY" \
+              --container-definitions "${CCI_ORB_AWS_ECS_CONTAINER_DEFS}" \
+              "$@" \
+              --output text \
+              --query 'taskDefinition.taskDefinitionArn')
+          echo "Registered task definition: ${REVISION}"
+
+          echo "export CCI_ORB_AWS_ECS_REGISTERED_TASK_DFN='${REVISION}'" >> "$BASH_ENV"
+        environment:
+          ECS_PARAM_FAMILY: ${MY_APP_PREFIX}-service
+          ECS_PARAM_PROFILE_NAME: ''
+        name: Register new task definition
+    - run:
+        command: "set -o noglob\n\n# These variables are evaluated so the config file may contain and pass in environment variables to the parameters.\nECS_PARAM_FAMILY=$(eval echo \"$ECS_PARAM_FAMILY\")\nECS_PARAM_CLUSTER_NAME=$(eval echo \"$ECS_PARAM_CLUSTER_NAME\")\nECS_PARAM_SERVICE_NAME=$(eval echo \"$ECS_PARAM_SERVICE_NAME\")\nECS_PARAM_PROFILE_NAME=$(eval echo \"$ECS_PARAM_PROFILE_NAME\")\n\nif [ -z \"${ECS_PARAM_SERVICE_NAME}\" ]; then\n    ECS_PARAM_SERVICE_NAME=\"$ECS_PARAM_FAMILY\"\nfi\n\nif [ \"$ECS_PARAM_FORCE_NEW_DEPLOY\" == \"1\" ]; then\n    set -- \"$@\" --force-new-deployment\nfi\n\nif [ -n \"${ECS_PARAM_PROFILE_NAME}\" ]; then\n    set -- \"$@\" --profile \"${ECS_PARAM_PROFILE_NAME}\"   \nfi\n\nif [ \"$ECS_PARAM_ENABLE_CIRCUIT_BREAKER\" == \"1\" ]; then\n    set -- \"$@\" --deployment-configuration \"deploymentCircuitBreaker={enable=true,rollback=true}\"\nfi\n\nDEPLOYED_REVISION=$(aws ecs update-service \\\n    --cluster \"$ECS_PARAM_CLUSTER_NAME\" \\\n    --service \"${ECS_PARAM_SERVICE_NAME}\" \\\n    --task-definition \"${CCI_ORB_AWS_ECS_REGISTERED_TASK_DFN}\" \\\n    --output text \\\n    --query service.taskDefinition \\\n    \"$@\")\necho \"export CCI_ORB_AWS_ECS_DEPLOYED_REVISION='${DEPLOYED_REVISION}'\" >> \"$BASH_ENV\"\n"
+        environment:
+          ECS_PARAM_CLUSTER_NAME: ${MY_APP_PREFIX}
+          ECS_PARAM_ENABLE_CIRCUIT_BREAKER: false
+          ECS_PARAM_FAMILY: ${MY_APP_PREFIX}-service
+          ECS_PARAM_FORCE_NEW_DEPLOY: false
+          ECS_PARAM_PROFILE_NAME: ''
+          ECS_PARAM_SERVICE_NAME: ''
+        name: Update service with registered task definition
+  update-ecr-uri:
+    docker:
+    - image: amazon/aws-cli:latest
+    steps:
+    - checkout
+    - run:
+        name: Save the Image URI into an environment variable
+        command: |
+          ECR_URI=$(aws ecr describe-images --repository-name ${MY_APP_PREFIX} \
+            --region ${AWS_REGION} \
+            --query 'imageDetails[-1].imageTags[0]' --output text)
+          echo "export ECR_URI='${ECR_URI}'" >> "$BASH_ENV"
+    - run:
+        name: Echo the variable
+        command: echo ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${MY_APP_PREFIX}:${ECR_URI}
+workflows:
+  build-and-deploy:
+    jobs:
+    - test
+    - aws-ecr/build-and-push-image
+    - aws-ecs/deploy-service-update:
+        requires:
+        - aws-ecr/build-and-push-image
+    - update-ecr-uri:
+        requires:
+        - aws-ecs/deploy-service-update
+        - aws-ecr/build-and-push-image
+  version: 2

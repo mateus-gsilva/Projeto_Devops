@@ -6,9 +6,9 @@ output "vpc_id" {
 
 output "subnet_ids" {
   value = [
-    aws_subnet.subnet_az1.id,
-    aws_subnet.subnet_az2.id,
-    aws_subnet.subnet_az3.id
+    aws_subnet.subnets[0].id,
+    aws_subnet.subnets[1].id,
+    aws_subnet.subnets[2].id
   ]
 }
 
@@ -28,20 +28,22 @@ output "ecs_service_name" {
   value = aws_ecs_service.service.name
 }
 
-output "ecs_task_definition_arn" {
+/*output "ecs_task_definition_arn" {
   value = aws_ecs_task_definition.task.arn
 }
+*/
 
 output "ecr_repository_url" {
   value = aws_ecr_repository.ecr.repository_url
 }
 
 output "security_group_id" {
-  value = aws_security_group.sg.id
+  value = aws_security_group.external.id
 }
 
 output "alb_security_group_id" {
-  value = aws_security_group.alb.id
+  value = aws_security_group.internal.id
+
 }
 
 output "aws_cloudwatch_dashboard_url" {
@@ -51,5 +53,3 @@ output "aws_cloudwatch_dashboard_url" {
 output "load_balancer_dns_url" {
   value = "http://${aws_lb.lb.dns_name}"
 }
-
-

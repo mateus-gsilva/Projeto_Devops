@@ -4,8 +4,9 @@ resource "aws_ecs_cluster" "cluster" {
     name  = "containerInsights"
     value = "enabled"
   }
-}
 
+  tags = merge(var.default_tags, {})
+}
 
 resource "aws_iam_role" "role" {
   name = "ecr_ecs_role"
@@ -28,7 +29,7 @@ resource "aws_iam_role" "role" {
 EOF
 
   inline_policy {
-    name = "ecr_permissions"
+    name   = "ecr_permissions"
     policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -51,9 +52,9 @@ EOF
 }
 EOF
   }
+
+  tags = merge(var.default_tags, {})
 }
-
-
 
 resource "aws_ecs_task_definition" "task" {
   family                   = "${var.app_prefix}-service"
@@ -61,40 +62,28 @@ resource "aws_ecs_task_definition" "task" {
   requires_compatibilities = ["FARGATE", "EC2"]
   cpu                      = 256
   memory                   = 1024
-  task_role_arn            = "${aws_iam_role.role.arn}"
-  execution_role_arn       = "${aws_iam_role.role.arn}"
-  container_definitions    = <<DEFINITION
-  [
-    {
-      "name"      : "projeto-devops-service",
-      "image"     : "343171458915.dkr.ecr.us-east-1.amazonaws.com/projeto-devops:0013faa2d91f017d66739591ad7e50da8f6e60a5",
-      "cpu"       : 256,
-      "memory"    : 1024,
-      "essential" : true,
-      "portMappings" : [
-        {
-          "containerPort" : 3000,
-          "hostPort"      : 3000
-        }
-      ]
-    }
-  ]
-  DEFINITION
+  task_role_arn            = aws_iam_role.role.arn
+  execution_role_arn       = aws_iam_role.role.arn
+  container_definitions    = file("../task_definition.json")
+
+  tags = merge(var.default_tags, {})
 }
 
 resource "aws_ecs_service" "service" {
   name             = "${var.app_prefix}-service"
   cluster          = aws_ecs_cluster.cluster.id
   task_definition  = aws_ecs_task_definition.task.id
-  desired_count    = 3
+  desired_count    = 1
   launch_type      = "FARGATE"
   platform_version = "LATEST"
 
   network_configuration {
     assign_public_ip = true
-    security_groups  = [aws_security_group.sg.id]
-    subnets          = [aws_subnet.subnet_az1.id,aws_subnet.subnet_az2.id,aws_subnet.subnet_az3.id]
+    security_groups  = [aws_security_group.external.id]
+
+    subnets = aws_subnet.subnets[*].id
   }
+
   lifecycle {
     ignore_changes = [task_definition]
   }
@@ -102,39 +91,43 @@ resource "aws_ecs_service" "service" {
   load_balancer {
     target_group_arn = aws_lb_target_group.tg.arn
     container_name   = "${var.app_prefix}-service"
-    container_port   = 3000
+    container_port   = 80
   }
-
+  tags = merge(var.default_tags, {})
 }
 
 resource "aws_ecr_repository" "ecr" {
-  name                 = "${var.app_prefix}"
+  name                 = var.app_prefix
   image_tag_mutability = "MUTABLE"
+  force_delete         = false
 
   image_scanning_configuration {
     scan_on_push = true
   }
+  tags = merge(var.default_tags, {})
 }
 
 resource "aws_lb" "lb" {
   name               = var.app_prefix
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.sg.id]
-  subnets            = [aws_subnet.subnet_az1.id, aws_subnet.subnet_az2.id, aws_subnet.subnet_az3.id]
+  security_groups    = [aws_security_group.external.id]
+  subnets = aws_subnet.subnets[*].id
+  tags = merge(var.default_tags, {})
 }
 
 resource "aws_lb_target_group" "tg" {
-name                = "${var.app_prefix}-tg"
-target_type         = "ip"
-port                = "3000"
-protocol            = "HTTP"
-vpc_id              = aws_vpc.main.id
+  name        = "${var.app_prefix}-tg"
+  target_type = "ip"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  tags = merge(var.default_tags, {})
 }
 
 resource "aws_lb_listener" "listener" {
   load_balancer_arn = aws_lb.lb.arn
-  port              = "80"
+  port              = 80
   protocol          = "HTTP"
 
   default_action {
@@ -142,4 +135,5 @@ resource "aws_lb_listener" "listener" {
     target_group_arn = aws_lb_target_group.tg.arn
   }
 
+  tags = merge(var.default_tags, {})
 }
