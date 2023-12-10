@@ -86,4 +86,4 @@ O dashboard irá monitorar o cluster ECS e seus componentes.
 
 ## Como Acessar
 
-Utilize o DNS do load balancer, disponível no output do Terraform ou no console. A aplicação está disponível em: [projeto-devops](http://aurora-941215823.us-east-1.elb.amazonaws.com/)
+Utilize o DNS do load balancer, disponível no output do Terraform ou no console. 
